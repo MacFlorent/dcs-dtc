@@ -1,5 +1,7 @@
 ﻿using DTC.Models.DCS;
 using DTC.Models.FA18.Waypoints;
+using System;
+using System.Drawing;
 using System.Text;
 
 namespace DTC.Models.FA18.Upload
@@ -64,11 +66,11 @@ namespace DTC.Models.FA18.Upload
 				
 				AppendCommand(ufc.GetCommand("Opt1"));
 				AppendCommand(Wait());
-				AppendCommand(BuildCoordinate(ufc, wpt.Latitude));
+				AppendCommand(BuildCoordinate2(ufc, wpt.Latitude)); // FG - precise coordinates management with BuildCoordinate2
 				AppendCommand(ufc.GetCommand("ENT"));
 				AppendCommand(WaitLong());
 
-				AppendCommand(BuildCoordinate(ufc, wpt.Longitude));
+				AppendCommand(BuildCoordinate2(ufc, wpt.Longitude)); // FG - precise coordinates management with BuildCoordinate2
 				AppendCommand(ufc.GetCommand("ENT"));
 				AppendCommand(WaitLong());
 
@@ -143,5 +145,101 @@ namespace DTC.Models.FA18.Upload
 
 			return sb.ToString();
 		}
+
+		private string BuildCoordinate2(Device ufc, string coord)
+		{
+			// FG - rework to add the option of precise coordinate input
+			/*
+			 * Input of coordinates varies in precise mode if the aircraft is in DCML on SEC
+			 * This here will only work in DCML, as it is the default mode in DCS, and there no efficient way to check which mode the aircraft is in
+			 * 
+			 * DCML
+			 *	Not PRECISE : N123456 > ENT
+			 *	PRECISE : N1234 > ENT > 5678
+			 *	
+			 * SEC
+			 *	Not PRECISE : N123456 > ENT
+			 *	PRECISE : N123456 > ENT > 78
+			*/
+			//
+
+			coord = $"{coord}88";
+
+			StringBuilder sb = new StringBuilder();
+
+			string sInputCleaned = RemoveSeparators(coord.Replace(" ", ""));
+			if (sInputCleaned.Length < 1) // we only require the hemisphere or meridian side, for the rest we will remplace any missing digit by 0
+				throw new Exception($"Input coordinate string is incorrect {coord}");
+
+			// hemisphere or meridian side
+			int iLongitudeOffset = 0; // one more digit for longitudes
+			char c = sInputCleaned[0];
+			if (c == 'N')
+			{
+				sb.Append(ufc.GetCommand("2"));
+			}
+			else if (c == 'S')
+			{
+				sb.Append(ufc.GetCommand("8"));
+			}
+			else if (c == 'E')
+			{
+				sb.Append(ufc.GetCommand("6"));
+				iLongitudeOffset = 1;
+			}
+			else if (c == 'W')
+			{
+				sb.Append(ufc.GetCommand("4"));
+				iLongitudeOffset = 1;
+			}
+			else
+			{
+				throw new Exception($"Input coordinate string is incorrect {coord}");
+			}
+
+			int i = 1;
+			// first 4 or 5 digits
+			while (i <= 4 + iLongitudeOffset)
+			{
+				BuildCoordinate2_AddDigit(ufc, sInputCleaned, i, sb);
+				i++;
+			}
+
+			// not precise, add 2 more digits
+			sb.Append(StartCondition("WPT_NOT_PRECISE"));
+			while (i <= 6 + iLongitudeOffset)
+			{
+				BuildCoordinate2_AddDigit(ufc, sInputCleaned, i, sb);
+				i++;
+			}
+			sb.Append(EndCondition("WPT_NOT_PRECISE"));
+
+			// precise, enter and add 4 more digits
+			sb.Append(StartCondition("WPT_PRECISE"));
+			sb.Append(ufc.GetCommand("ENT"));
+			while (i <= 8 + iLongitudeOffset)
+			{
+				BuildCoordinate2_AddDigit(ufc, sInputCleaned, i, sb);
+				i++;
+			}
+			sb.Append(EndCondition("WPT_PRECISE"));
+			
+			return sb.ToString();
+		}
+
+		private void BuildCoordinate2_AddDigit(Device ufc, string sInputCleaned, int iInputPosition, StringBuilder sb)
+		{
+			char c = '0';
+			if (!string.IsNullOrEmpty(sInputCleaned) && iInputPosition < sInputCleaned.Length)
+			{
+				c = sInputCleaned[iInputPosition];
+			}
+
+			if (c < 48 || c > 57)
+				throw new Exception($"Input coordinate string is incorrect {sInputCleaned}");
+
+			sb.Append(ufc.GetCommand(c.ToString()));
+		}
+
 	}
 }

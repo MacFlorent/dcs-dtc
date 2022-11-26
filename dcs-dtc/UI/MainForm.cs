@@ -17,6 +17,10 @@ namespace DTC.UI
 			InitializeComponent();
 
 			ResetToPage(_mainPage);
+
+			System.Reflection.Assembly assembly = System.Reflection.Assembly.GetExecutingAssembly();
+			System.Diagnostics.FileVersionInfo fvi = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location);
+			LbVersion.Text = $"V {fvi.FileVersion} (FG)";
 		}
 
 		private void SetPage(Page page)

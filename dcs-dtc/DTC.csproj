@@ -621,6 +621,7 @@
     <None Include="Resources\F16.png" />
     <None Include="Resources\FA18.png" />
     <None Include="Resources\AH64.png" />
+    <None Include="console.lua" />
     <Content Include="Resources\Iconleak-Atrous-Disk.ico" />
     <None Include="Resources\Waypoints.png" />
     <Content Include="Structure.txt" />

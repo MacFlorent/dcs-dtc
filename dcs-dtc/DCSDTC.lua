@@ -178,7 +178,7 @@ local function checkConditionTACANBandY()
 end
 
 local function checkConditionAtWp0()
-	local table =parse_indication(4);
+	local table =parse_indication(3); -- FG check on rmfd not ampcd (only used for F18)
 	local str = table["WYPT_Page_Number"]
 	if str == "0" then
 		return true
@@ -187,7 +187,7 @@ local function checkConditionAtWp0()
 end
 
 local function checkConditionNotAtWp0()
-	local table =parse_indication(4);
+	local table =parse_indication(3); -- FG check on rmfd not ampcd (only used for F18)
 	local str = table["WYPT_Page_Number"]
 	if str == "0" then
 		return false
@@ -294,6 +294,14 @@ local function checkConditionRmfdNotSupt()
 	return true
 end
 
+-- FG - enable precise coordinates for F/A-18
+local function checkConditionPrecise()
+	local table =parse_indication(3);
+	local str = table["PRECISE_1_box__id:26"]
+	return str ~=nil
+end
+--
+
 local function checkCondition(condition)
 	if condition == "NOT_IN_AA" then
 		return checkConditionNotInAAMode();
@@ -347,6 +355,12 @@ local function checkCondition(condition)
 		return checkConditionLmfdNotTac();
 	elseif condition == "RMFD_NOT_SUPT" then
 		return checkConditionRmfdNotSupt();
+	-- FG - enable precise coordinates for F/A-18
+	elseif condition == "WPT_PRECISE" then
+		return checkConditionPrecise();
+	elseif condition == "WPT_NOT_PRECISE" then
+		return not checkConditionPrecise();
+	--
 	else
 		return false
 	end
@@ -448,7 +462,15 @@ function LuaExportAfterNextFrame()
 	local loZ = camPos['p']['z']
 	local elevation = LoGetAltitude(loX, loZ)
 	local coords = LoLoCoordinatesToGeoCoordinates(loX, loZ)
-	local model = LoGetSelfData()["Name"];
+	--local model = LoGetSelfData()["Name"];
+	-- FG - LoGetSelfData will be nil if no aircraft (ex observer)
+	local modelObject = LoGetSelfData()
+	if (modelObject == nil) then
+		log.write("DCS-DTC", log.INFO, "Unable to send data, LoGetSelfData returned nil")
+		return
+	end
+	local model = modelObject["Name"];
+	-- 
 	
 	local toSend = "{"..
 		"\"model\": ".."\""..model.."\""..

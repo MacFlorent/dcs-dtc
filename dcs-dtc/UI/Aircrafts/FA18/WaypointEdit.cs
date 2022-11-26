@@ -214,7 +214,7 @@ namespace DTC.UI.Aircrafts.FA18
 						txtWptLatLong.Text = latitude + " " + longitude;
 						txtWptElevation.Text = elevation;
 					}));
-				}, new DmsShortFormatter());
+				}, new DdmLongFormatter()); // FG - replaced DmsShortFormatter, for F18 we want DCML mode and long format in case of PRECISE
 			}
 			else
 			{
