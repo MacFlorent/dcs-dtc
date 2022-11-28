@@ -99,7 +99,7 @@ namespace DTC.UI.Aircrafts.FA18
 					_flightPlan.Add(wpt);
 					_callback(WaypointEditResult.Add, wpt);
 					ResetFields();
-				} 
+				}
 				else
 				{
 					_waypoint.Elevation = wpt.Elevation;
@@ -192,12 +192,23 @@ namespace DTC.UI.Aircrafts.FA18
 			txtWptLatLong.Focus();
 		}
 
+		private string GetCorrectedCoordinate(string sCoordinate, int iLength)
+		{ // FG - PRECISE coordinates
+			if (sCoordinate.Length > iLength)
+				return sCoordinate.Substring(0, iLength);
+			else if (sCoordinate.Length < iLength)
+				return sCoordinate.PadRight(iLength, '0');
+			else
+				return sCoordinate;
+		}
+
 		private void cboAirbases_SelectedIndexChanged(object sender, EventArgs e)
 		{
 			if (cboAirbases.SelectedIndex > -1)
 			{
 				var item = (AirbaseComboBoxItem)cboAirbases.SelectedItem;
-				var wpt = new Waypoint(0, item.Airbase, item.Latitude.Substring(0,10), item.Longitude.Substring(0,11), item.Elevation);
+
+				var wpt = new Waypoint(0, item.Airbase, GetCorrectedCoordinate(item.Latitude, 12), GetCorrectedCoordinate(item.Longitude, 13), item.Elevation);
 				LoadWaypoint(wpt);
 			}
 		}
