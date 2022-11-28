@@ -466,7 +466,7 @@ function LuaExportAfterNextFrame()
 	-- FG - LoGetSelfData will be nil if no aircraft (ex observer)
 	local modelObject = LoGetSelfData()
 	if (modelObject == nil) then
-		log.write("DCS-DTC", log.INFO, "Unable to send data, LoGetSelfData returned nil")
+		-- too many logs - log.write("DCS-DTC", log.INFO, "Unable to send data, LoGetSelfData returned nil")
 		return
 	end
 	local model = modelObject["Name"];
