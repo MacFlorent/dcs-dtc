@@ -1,7 +1,6 @@
 ﻿using DTC.Models.DCS;
 using DTC.Models.FA18.Waypoints;
 using System;
-using System.Drawing;
 using System.Text;
 
 namespace DTC.Models.FA18.Upload
@@ -16,7 +15,7 @@ namespace DTC.Models.FA18.Upload
 		}
 
 		private void selectWp0(Device rmfd, int i)
-        {
+		{
 			if (i < 140) // It might not notice on the first pass, so we go around once more
 			{
 				AppendCommand(StartCondition("NOT_AT_WP0"));
@@ -37,7 +36,7 @@ namespace DTC.Models.FA18.Upload
 			}
 
 			var wptDiff = wptEnd - wptStart;
-			
+
 			var ufc = _aircraft.GetDevice("UFC");
 			var rmfd = _aircraft.GetDevice("RMFD");
 			AppendCommand(rmfd.GetCommand("OSB-18")); // MENU
@@ -49,21 +48,21 @@ namespace DTC.Models.FA18.Upload
 			AppendCommand(rmfd.GetCommand("OSB-05")); // UFC
 
 			selectWp0(rmfd, 0);
-			for (var i = 0; i< wptStart; i++)
-            {
+			for (var i = 0; i < wptStart; i++)
+			{
 				AppendCommand(rmfd.GetCommand("OSB-12"));
 			}
 
 			for (var i = 0; i < wptDiff; i++)
 			{
 				Waypoint wpt;
-                wpt = wpts[i];
+				wpt = wpts[i];
 
 				if (wpt.Blank)
 				{
 					continue;
 				}
-				
+
 				AppendCommand(ufc.GetCommand("Opt1"));
 				AppendCommand(Wait());
 				AppendCommand(BuildCoordinate2(ufc, wpt.Latitude)); // FG - precise coordinates management with BuildCoordinate2
@@ -87,9 +86,9 @@ namespace DTC.Models.FA18.Upload
 				AppendCommand(rmfd.GetCommand("OSB-13")); // Prev Waypoint
 			}
 
-            AppendCommand(Wait());
+			AppendCommand(Wait());
 			AppendCommand(rmfd.GetCommand("OSB-18"));
-            AppendCommand(Wait());
+			AppendCommand(Wait());
 			AppendCommand(rmfd.GetCommand("OSB-18"));
 			AppendCommand(rmfd.GetCommand("OSB-15"));
 		}
@@ -119,7 +118,7 @@ namespace DTC.Models.FA18.Upload
 				{
 					sb.Append(ufc.GetCommand("6"));
 					i = 0;
-					lon = true;	
+					lon = true;
 				}
 				else if (c == 'W')
 				{
@@ -129,16 +128,17 @@ namespace DTC.Models.FA18.Upload
 				}
 				else
 				{
-					if (i <= 5 || (i<= 6 && longLon)) { 
+					if (i <= 5 || (i <= 6 && longLon))
+					{
 						if (!(i == 0 && c == '0' && lon))
-                        {
-							if(i == 0 && c == '1' && lon) longLon = true;
+						{
+							if (i == 0 && c == '1' && lon) longLon = true;
 
 							sb.Append(ufc.GetCommand(c.ToString()));
 							i++;
 							lon = false;
-						}					
-							
+						}
+
 					}
 				}
 			}
@@ -154,16 +154,18 @@ namespace DTC.Models.FA18.Upload
 			 * This here will only work in DCML, as it is the default mode in DCS, and there no efficient way to check which mode the aircraft is in
 			 * 
 			 * DCML
-			 *	Not PRECISE : N123456 > ENT
+			 *	Not PRECISE :
+			 *		N123456 > ENT
+			 *		E1234567 > ENT
+			 *		Warning, in not PRECISE, only 6 digits for longitude if first one is 0 : E012345 > ENT
+			 *		
 			 *	PRECISE : N1234 > ENT > 5678
 			 *	
-			 * SEC
+			 * SEC (not used here information only)
 			 *	Not PRECISE : N123456 > ENT
 			 *	PRECISE : N123456 > ENT > 78
 			*/
 			//
-
-			coord = $"{coord}88";
 
 			StringBuilder sb = new StringBuilder();
 
@@ -171,7 +173,7 @@ namespace DTC.Models.FA18.Upload
 			if (sInputCleaned.Length < 1) // we only require the hemisphere or meridian side, for the rest we will remplace any missing digit by 0
 				throw new Exception($"Input coordinate string is incorrect {coord}");
 
-			// hemisphere or meridian side
+			// hemisphere
 			int iLongitudeOffset = 0; // one more digit for longitudes
 			char c = sInputCleaned[0];
 			if (c == 'N')
@@ -197,34 +199,51 @@ namespace DTC.Models.FA18.Upload
 				throw new Exception($"Input coordinate string is incorrect {coord}");
 			}
 
-			int i = 1;
+			BuildCoordinate2_NotPreciseDigits(ufc, sInputCleaned.Substring(1, sInputCleaned.Length - 1), iLongitudeOffset, sb);
+			BuildCoordinate2_PreciseDigits (ufc, sInputCleaned.Substring(1, sInputCleaned.Length - 1), iLongitudeOffset, sb);
+
+			Console.WriteLine(sb.ToString());
+			return sb.ToString();
+		}
+
+		private void BuildCoordinate2_NotPreciseDigits(Device ufc, string sInputCleanedDigits, int iLongitudeOffset, StringBuilder sb)
+		{
+			sb.Append(StartCondition("WPT_NOT_PRECISE"));
+
+			int iStartOffset = 0;
+			if (sInputCleanedDigits.Length > 1 && sInputCleanedDigits[0] == '0' && iLongitudeOffset > 0)
+				iStartOffset = 1; // ignore first 0 for longitude  if not precise
+			
 			// first 4 or 5 digits
-			while (i <= 4 + iLongitudeOffset)
+			for (int i = 0 + iStartOffset; i < 4 + iLongitudeOffset; i++)
 			{
-				BuildCoordinate2_AddDigit(ufc, sInputCleaned, i, sb);
-				i++;
+				BuildCoordinate2_AddDigit(ufc, sInputCleanedDigits, i, sb);
 			}
 
 			// not precise, add 2 more digits
-			sb.Append(StartCondition("WPT_NOT_PRECISE"));
-			while (i <= 6 + iLongitudeOffset)
+			for (int i = 4 + iLongitudeOffset; i < 6 + iLongitudeOffset; i++)
 			{
-				BuildCoordinate2_AddDigit(ufc, sInputCleaned, i, sb);
-				i++;
+				BuildCoordinate2_AddDigit(ufc, sInputCleanedDigits, i, sb);
 			}
 			sb.Append(EndCondition("WPT_NOT_PRECISE"));
+		}
 
-			// precise, enter and add 4 more digits
+		private void BuildCoordinate2_PreciseDigits(Device ufc, string sInputCleanedDigits, int iLongitudeOffset, StringBuilder sb)
+		{
 			sb.Append(StartCondition("WPT_PRECISE"));
-			sb.Append(ufc.GetCommand("ENT"));
-			while (i <= 8 + iLongitudeOffset)
+			// first 4 or 5 digits
+			for (int i = 0; i < 4 + iLongitudeOffset; i++)
 			{
-				BuildCoordinate2_AddDigit(ufc, sInputCleaned, i, sb);
-				i++;
+				BuildCoordinate2_AddDigit(ufc, sInputCleanedDigits, i, sb);
+			}
+
+			// enter and add 4 more digits
+			sb.Append(ufc.GetCommand("ENT"));
+			for (int i = 4 + iLongitudeOffset; i < 8 + iLongitudeOffset; i++)
+			{
+				BuildCoordinate2_AddDigit(ufc, sInputCleanedDigits, i, sb);
 			}
 			sb.Append(EndCondition("WPT_PRECISE"));
-			
-			return sb.ToString();
 		}
 
 		private void BuildCoordinate2_AddDigit(Device ufc, string sInputCleaned, int iInputPosition, StringBuilder sb)

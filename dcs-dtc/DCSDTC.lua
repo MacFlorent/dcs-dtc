@@ -462,14 +462,13 @@ function LuaExportAfterNextFrame()
 	local loZ = camPos['p']['z']
 	local elevation = LoGetAltitude(loX, loZ)
 	local coords = LoLoCoordinatesToGeoCoordinates(loX, loZ)
-	--local model = LoGetSelfData()["Name"];
 	-- FG - LoGetSelfData will be nil if no aircraft (ex observer)
+	--local model = LoGetSelfData()["Name"];
 	local modelObject = LoGetSelfData()
-	if (modelObject == nil) then
-		-- too many logs - log.write("DCS-DTC", log.INFO, "Unable to send data, LoGetSelfData returned nil")
-		return
+	local model = "-no model-"
+	if (modelObject ~= nil) then
+		local model = modelObject["Name"];
 	end
-	local model = modelObject["Name"];
 	-- 
 	
 	local toSend = "{"..

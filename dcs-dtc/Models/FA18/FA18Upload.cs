@@ -68,7 +68,7 @@ namespace DTC.Models
 				var waypointBuilder = new WaypointBuilder(_cfg, fa18, sb);
 				waypointBuilder.Build();
 			}
-			/*
+			
 			if (_cfg.Sequences.EnableUpload)
 			{
 				var sequenceBuilder = new SequenceBuilder(_cfg, fa18, sb);
@@ -98,7 +98,7 @@ namespace DTC.Models
 				var miscBuilder = new MiscBuilder(_cfg, fa18, sb);
 				miscBuilder.Build();
 			}
-			*/
+			
 			if (sb.Length > 0)
 			{
 				sb.Remove(sb.Length - 1, 1);
