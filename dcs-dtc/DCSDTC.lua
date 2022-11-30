@@ -287,7 +287,7 @@ end
 
 local function checkConditionRmfdNotSupt()
 	local table = parse_indication(3);
-	local str = table["SUPT_id:12"]
+	local str = table["SUPT_id:13"] -- FG - id corrected
 	if str == "SUPT" then
 		return false
 	end 
